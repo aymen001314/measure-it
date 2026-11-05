@@ -35,7 +35,12 @@ def collect_points(image, count, title, instruction):
     cv2.imshow(window, shown)
     print(instruction)
     key = cv2.waitKey(0)
-    cv2.destroyWindow(window)
+    # The user may close the OpenCV window with its X button. Some OpenCV builds
+    # then raise when destroyWindow is called for a window that is already gone.
+    try:
+        cv2.destroyWindow(window)
+    except cv2.error:
+        pass
     if key == 27:
         raise SystemExit("Cancelled by user.")
     if len(state["points"]) != count:
