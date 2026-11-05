@@ -1,16 +1,16 @@
 # measure-it
 
-Camera-calibrated image workflow and an **interactive classical-CV measurement baseline** for estimating an object's two visible top-view dimensions. This is not a trained segmentation model and does not infer thickness from a top-view photo.
+Camera calibration and an interactive classical-computer-vision measurement baseline for an eraser. The measurement tool uses manual clicks on the ruler and object corners. It is not a trained segmentation model; no model metrics or weights are claimed.
 
-## Project object and reference
+## Known dimensions and reference
 
-- Object: eraser. User-provided reference dimensions: length 32.5 mm, width 19 mm, thickness/height 10 mm. Validate these against the ruler photos and report measured errors; do not present reference values as model output.
-- Scale reference: ruler in the same image, or checkerboard squares only if their printed physical size has been verified. The supplied board says 20 mm nominal per square; measure the printed square with a ruler and use the actual value.
-- Keep eraser and scale reference on the same flat plane. Use a side-view image for thickness.
+User-provided eraser dimensions are **32.5 mm × 19 mm × 10 mm**. Use these as comparison values only after confirming them independently with the ruler. Keep the eraser and scale reference in the same flat plane. Use a side-view image for the 10 mm thickness.
+
+The supplied checkerboard sheet says each square is **nominally 20 mm**; verify the printed square with a ruler before using it. Calibration square size and image measurement scale are different things: calibration corrects lens distortion, while an in-frame ruler/verified checker square provides scale.
 
 ## Setup (Windows PowerShell)
 
-From the repository root:
+Run from the repository root:
 
 ```powershell
 python -m venv .venv
@@ -19,50 +19,54 @@ python -m pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## 1. Check the dataset
+## Fast submission workflow
 
-Put eraser photos in `dataset/images/` and checkerboard calibration photos in `calibration/images/`.
+1. Place the 71 photos in `dataset/images/`. Keep checkerboard photos in `calibration/images/`.
+2. Check image count/readability:
 
 ```powershell
 python dataset/check_dataset.py --images dataset/images
 ```
 
-The script checks file count and readability; manually review blur, full object visibility, and whether a ruler/reference is visible in each image used for measurement.
-
-## 2. Camera calibration
-
-Use the actual number of **inner corners** in the checkerboard (not number of squares), and the square size measured with your ruler. If each square measures 20 mm and the board has 9 inner corners across and 7 down:
+3. If camera calibration images are available, use the actual checkerboard **inner corner count** and square size measured from the print. Example only (9 × 7 inner corners, 20 mm squares):
 
 ```powershell
 python calibration/calibrate.py --images calibration/images --cols 9 --rows 7 --square-mm 20
 ```
 
-Change `--cols`, `--rows`, or `--square-mm` to match the physical board. Calibration writes `calibration/camera_params.npz` and `calibration/camera_params_report.json`.
+Do not use 20 unless the printed square actually measures 20 mm. Calibration outputs `calibration/camera_params.npz` and `calibration/camera_params_report.json`.
 
-## 3. Optional undistortion and split
+4. Measure one ruler-visible image. Replace the filename and known ruler span below. For ruler marks 0 cm and 3 cm, use 30 mm:
+
+```powershell
+python inference/measure.py --image dataset/images/photo.jpg --ref-mm 30
+```
+
+Optional lens correction if calibration params exist: add `--params calibration/camera_params.npz`.
+
+In the first window click two ruler marks exactly 30 mm apart and press a key. In the next window click the four outer corners of the eraser's visible face in order around its perimeter, then press a key. Review the saved overlay in `outputs/` and JSON before using the result. If the green outline is misplaced, rerun and click again. The estimate is manual and perspective is not corrected.
+
+5. For an accuracy report, create a CSV based on `docs/accuracy_template.csv`. Enter real measured and predicted values for at least 10 images; run:
+
+```powershell
+python evaluation/evaluate_accuracy.py --csv docs/accuracy_template.csv --out outputs/accuracy_report.json
+```
+
+Replace the example row with actual results and add the other images. Never submit the template/example values as measured results. The script reports MAE, median absolute error, and worst absolute error for visible long/short sides.
+
+## Optional preprocessing
 
 ```powershell
 python dataset/prepare_images.py --raw dataset/images --out dataset/undistorted --params calibration/camera_params.npz
 python dataset/make_split.py --images dataset/undistorted --out dataset/split
 ```
 
-The split script only splits image files. It does not create masks/labels or train a model; do not report model metrics unless a model is actually trained and evaluated.
+The split contains images only: it does not create labels or train a model. Do not claim IoU, mAP, precision/recall, model weights, or trained-model results unless those are actually produced and evaluated.
 
-## 4. Measure a top-view image
+## Limits to disclose
 
-Choose an image with the eraser and a ruler/checkerboard scale in the same plane. For example, if you will click ruler marks 0 and 3 cm apart, `--ref-mm` is 30:
-
-```powershell
-python inference/measure.py --image dataset/images/photo.jpg --ref-mm 30 --params calibration/camera_params.npz
-```
-
-In the OpenCV window, click the two endpoints of the known reference distance and press Enter. Then select a tight rectangle around only the eraser top face and press Enter. Inspect the saved overlay in `outputs/` and the JSON before using the estimate. Omit `--params` if calibration parameters are unavailable.
-
-The output is the visible top-view long and short sides. Thickness/height requires a separate side-view image and is not inferred by this script.
-
-## Submission honesty / limitations
-
-- Checkerboard calibration estimates lens distortion; scale still comes from a known ruler distance or physically verified square in the same image.
-- The 71-image count is useful, but a trained model requires accurate labels and evaluation. This repository's current baseline does not provide trained weights, masks, or model metrics.
-- For an accuracy report, run measurements on at least 10 ruler-visible images, record each output against the independently measured ground truth, and calculate the errors. Do not invent results.
-- Do not commit private photos or generated calibration files unless intended; large/private data can stay local.
+- A checkerboard calibration estimates lens distortion; scale comes from a known ruler distance or physically verified checkerboard square in the same image.
+- Top-view images provide visible face dimensions, not thickness. Thickness needs a side view and its own scale reference.
+- Manual clicks and camera perspective introduce measurement error; use a nearly overhead camera and inspect each overlay.
+- 71 images meet the image-count target, but they are not automatically labeled. The current implementation is a reproducible interactive baseline, not a fully automated trained model.
+- Do not commit private photos or generated calibration files unless intended.
