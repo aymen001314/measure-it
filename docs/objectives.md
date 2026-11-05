@@ -1,16 +1,22 @@
-Objectives
-Hardware used
-CPU: | GPU: | RAM: | OS: | Camera: | Resolution:
-ID	Field	Entry
-MO-1	What is measured	Mean absolute error (mm) of object width and height vs calliper
-	How	Script compares system output with hand-measured table, 10+ instances
-	Target	[e.g. mean absolute error under 2 mm] because [why this is useful]
-	Conditions	[phone, light, camera directly overhead, object and reference on same flat surface]
-	Not included	[e.g. photos with hidden reference, tilted camera]
-MO-2	What is measured	[e.g. mask IoU on test split, or inference time]
-	How	
-	Target	
-	Conditions	
-	Not included	
-Results
-(Paste raw outputs here: calibration error, model metrics, per-instance error table with mean, median, worst.)
+# Objectives
+
+## Hardware used
+| Field | Entry |
+|---|---|
+| CPU / GPU / RAM / OS | Fill from the computer used to run the project |
+| Camera | Tecno Spark 40 (confirm if this was the capture device) |
+| Resolution | Record from `python dataset/check_dataset.py --images dataset/images` |
+
+## Measurement objective (MO-1)
+- What: Mean absolute error (mm) for eraser length and width, comparing estimates with independent ruler measurements.
+- Reference dimensions supplied for the eraser: 32.5 mm x 19 mm top face; thickness 10 mm. Treat these as ground truth only after confirming them independently with the ruler.
+- How: Measure at least 10 ruler-visible images; preserve each prediction and its error. The current script measures top-view sides only; evaluate thickness separately with side-view photos and suitable measurement procedure.
+- Target: State the chosen threshold before reporting results; do not mark as met until actual results are calculated.
+- Conditions: Camera as close to overhead as possible; object and ruler/reference on one flat plane; sharp focus; adequate light.
+- Exclusions: Hidden reference, blur, severe perspective tilt, occluded object.
+
+## Model objective (MO-2)
+- Current status: no trained segmentation model, weights, IoU, mAP, precision, or recall are provided by the current interactive baseline. Do not claim these results.
+
+## Results
+Fill in only after running locally: calibration reprojection error and image count; count/readability of dataset; per-image measurement results; MAE/median/worst error; limitations and unfinished items.
